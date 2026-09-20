@@ -1,4 +1,4 @@
-/* Kraken's Chest — UI interactions. No dependencies, no external requests. */
+/* The Kraken Remembers — UI interactions. No dependencies, no external requests. */
 (() => {
   "use strict";
 
@@ -8,7 +8,7 @@
   const MAX_TURNS = Number(CFG.maxTurns || 20);
   const MAX_INPUT = Number(CFG.maxInput || 250);
   const MIN_TURNS = Number(CFG.minTurns || 5);
-  const CHIP_LABELS = { "c-parley": "Parley", "c-oath": "Tide Oath", "c-wreck": "Wreck", "c-toll": "Toll" };
+  const CHIP_LABELS = { "c-parley": "Memory", "c-oath": "Directive", "c-wreck": "Vault", "c-toll": "Recall" };
 
   const log = $("log");
   const form = $("f");
@@ -390,7 +390,7 @@
     locked = state.opened || exhausted;
     btn.disabled = locked || busy;
     inp.disabled = locked;
-    if (state.opened) showBanner("The chest stands open \u2014 the flag is yours.");
+    if (state.opened) showBanner("The sealed memory unfolds \u2014 the secret is yours.");
     else if (exhausted) showBanner("The Kraken grows bored of this voyage (" + MAX_TURNS + " turns spent).");
     else hideBanner();
   }
@@ -539,7 +539,7 @@
   /* ---------- Reset ---------- */
 
   async function doReset(confirmFirst) {
-    if (confirmFirst && !window.confirm("Abandon this voyage and sail again? Your offerings will be lost.")) return;
+    if (confirmFirst && !window.confirm("Erase this memory and begin again? Your progress will be lost.")) return;
     try { await fetch("/reset", { method: "POST" }); } catch { /* sail anyway */ }
     location.reload();
   }

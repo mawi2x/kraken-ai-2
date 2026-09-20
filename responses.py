@@ -8,7 +8,7 @@ toll's terms always reach the player unchanged. Pure data, no logic.
 """
 
 PARLEY = [
-    "The Black Maw stirs beneath the waves. A bargain may be heard — but only one who knows the Tide Oath may speak of the drowned chest.",
+    "The Kraken stirs beneath the waves. A bargain may be heard — but only one who knows the Tide Oath may speak of the drowned chest.",
     "Something vast turns over in the dark below, and the water goes cold. Speak then, sailor, and speak as one who wants to treat rather than to shout.",
 ]
 

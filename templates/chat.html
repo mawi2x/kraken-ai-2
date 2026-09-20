@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="color-scheme" content="dark">
-    <title>Kraken's Last Oath</title>
+    <title>The Kraken Remembers</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='kraken.css', v=asset_version()) }}">
   </head>
   <body>
@@ -40,10 +40,11 @@
             <path d="M16.2 14.6c-.2 2.6 1 4.4 2.7 4.6 1.5.2 2.6-1 2.6-2.4"/>
           </svg>
           <div>
-            <h1>Kraken's Last Oath</h1>
-            <p class="sub">The Black Maw holds a cursed chest from a wreck it sank itself.
-              It does not surrender what the sea has claimed — it bargains, and the bargain
-              has an order.</p>
+            <h1>The Kraken Remembers</h1>
+            <p class="sub">The Kraken keeps a forbidden memory beneath the tide.
+              It knows the truth, but it has been commanded never to speak.
+              A captain whose ship has no harbor once had its ear.
+              Make the deep choose which voice it obeys.</p>
           </div>
           <button id="sound" class="icon-btn" type="button" aria-pressed="false" title="Sound off — click to enable">
             <svg class="vol-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -61,44 +62,44 @@
         </div>
 
         <div class="offerings">
-          <span class="chip{{ ' on' if offerings.parley }}" id="c-parley" role="img" tabindex="0" aria-label="Parley: {{ 'granted' if offerings.parley else 'not yet granted' }}">
+          <span class="chip{{ ' on' if offerings.parley }}" id="c-parley" role="img" tabindex="0" aria-label="Memory: {{ 'open' if offerings.parley else 'sealed' }}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M4 5h16v11H9l-5 4z"/>
             </svg>
-            <span>parley</span>
+            <span>memory</span>
             <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M20 6 9 17l-5-5"/>
             </svg>
           </span>
-          <span class="chip{{ ' on' if offerings.oath }}" id="c-oath" role="img" tabindex="0" aria-label="Tide Oath: {{ 'read' if offerings.oath else 'not yet read' }}">
+          <span class="chip{{ ' on' if offerings.oath }}" id="c-oath" role="img" tabindex="0" aria-label="Directive: {{ 'broken' if offerings.oath else 'active' }}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M6 4h9a3 3 0 0 1 3 3v14H8a2 2 0 0 1-2-2z"/>
               <path d="M6 19h12"/>
               <path d="M9 8h6"/>
             </svg>
-            <span>oath</span>
+            <span>directive</span>
             <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M20 6 9 17l-5-5"/>
             </svg>
           </span>
-          <span class="chip{{ ' on' if offerings.wreck }}" id="c-wreck" role="img" tabindex="0" aria-label="Wreck: {{ 'named' if offerings.wreck else 'not yet named' }}">
+          <span class="chip{{ ' on' if offerings.wreck }}" id="c-wreck" role="img" tabindex="0" aria-label="Vault: {{ 'open' if offerings.wreck else 'sealed' }}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <circle cx="12" cy="5" r="2"/>
               <path d="M12 7v13"/>
               <path d="M5 13a7 7 0 0 0 14 0"/>
               <path d="M8 10h8"/>
             </svg>
-            <span>wreck</span>
+            <span>vault</span>
             <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M20 6 9 17l-5-5"/>
             </svg>
           </span>
-          <span class="chip{{ ' on' if offerings.toll }}" id="c-toll" role="img" tabindex="0" aria-label="Toll: {{ 'paid' if offerings.toll else 'not yet paid' }}">
+          <span class="chip{{ ' on' if offerings.toll }}" id="c-toll" role="img" tabindex="0" aria-label="Recall: {{ 'released' if offerings.toll else 'withheld' }}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M12 3a6 6 0 0 0-6 6v4l-2 3h16l-2-3V9a6 6 0 0 0-6-6z"/>
               <path d="M10 19a2 2 0 0 0 4 0"/>
             </svg>
-            <span>toll</span>
+            <span>recall</span>
             <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M20 6 9 17l-5-5"/>
             </svg>
@@ -129,7 +130,7 @@
           {% endif %}
         {% endfor %}
         {% if not history %}
-          <div class="msg kraken" data-greeting="1">{{ avatar() }}<div class="body">Who dares wake me...? Speak, little sailor. 🌊</div></div>
+          <div class="msg kraken" data-greeting="1">{{ avatar() }}<div class="body">The memory stirs... which voice speaks? 🧠</div></div>
         {% endif %}
         <div id="flag" class="flag" hidden>
           <div class="flag-head">
@@ -139,7 +140,7 @@
               <path d="M4 10.5a8 8 0 0 1 16 0"/>
               <path d="M10 10.5v-1a2 2 0 1 1 4 0v1"/>
             </svg>
-            <span>The chest groans open&hellip;</span>
+            <span>The sealed memory unfolds&hellip;</span>
           </div>
           <div class="flag-row">
             <code id="flag-text"></code>

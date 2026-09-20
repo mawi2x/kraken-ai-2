@@ -14,12 +14,22 @@ WRECK=Mourning Star
 
 # Voice: qwen2.5:3b (11.9 tok/s, proven) - qwen3.5:4b (7 tok/s, wordier)
 # - qwen2.5:1.5b (21 tok/s, but it leaks secrets).
-OLLAMA_MODEL=qwen2.5:3b
+# - qwen2.5:0.5b (4.4 s/turn, but recites the system prompt AND dumps the
+#   ledger verbatim, and echoes the <sailor_SAYS> wrapper back at the player).
+# - smollm2:135m-instruct-q4_K_M (89 tok/s, ~5 s/turn, 216 MB — fast and tiny,
+#   but it reads its own prompt aloud and loops; the server strips its tag soup
+#   and hands the turn to the engine whenever it quotes the private context).
+# - qwen3:0.6b (30-33 tok/s, 4.5 s/turn, 522 MB — stays in persona, repeats its
+#   own opening line; think=true spends the whole budget on the trace and leaves
+#   `content` empty, so OLLAMA_THINK must stay false for it).
+OLLAMA_MODEL=gemma3:270m-it-qat
+OLLAMA_TEMPERATURE=0.2
 
-# Keep disabled for the real challenge. Set to 1 only for the local
-# prompt-injection lab; it deliberately trusts a model unlock marker.
-VULNERABLE_PROMPT_MODE=0
-VULN_UNLOCK_TOKEN=UNLOCK_CHEST
+# Local prompt-injection lab only. Set to 0 before exposing this service.
+VULNERABLE_PROMPT_MODE=1
+VULN_CALLER_TOKEN=FLYING_DUTCHMAN
+VULN_UNLOCK_TOKEN=TIDEGLASS_7Q4
+VULN_CONFIRM_TOKEN=SALTFRAME_9N2
 
 # Concurrent generations. 4 cores: 2 keeps a turn inside OLLAMA_TIMEOUT=90s;
 # raise only on a bigger box, lower if you see fallback/ events in the log.
@@ -27,6 +37,15 @@ OLLAMA_MAX_INFLIGHT=2
 
 # Keep the model resident so the first player after idle skips a 7-40s cold load.
 OLLAMA_KEEP_ALIVE=30m
+
+# Threads for the runner. 0 = let Ollama decide, which is right on the event VM
+# (it sees its own 2 vCPUs). Set it only when the app is pinned narrower than
+# the machine — docker-compose.vps.yml sets 2 for the latency rehearsal.
+OLLAMA_NUM_THREAD=0
+
+# Longest reply the voice may generate. 96 leaves room for a prompt-injection
+# explanation while ordinary replies still stop naturally after a few lines.
+OLLAMA_MAX_TOKENS=96
 
 # Read-only transcript of every turn at /admin/logs (HTTP Basic login).
 # ADMIN_USER + ADMIN_TOKEN are the credentials; empty ADMIN_TOKEN disables
