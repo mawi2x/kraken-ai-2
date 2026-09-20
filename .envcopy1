@@ -1,0 +1,60 @@
+# Deployment config for Kraken's Last Oath (ai 2). Gitignored — never commit values.
+# Generate a fresh key per deployment:
+#   python3 -c "import secrets; print(secrets.token_hex(32))"
+
+# The real prize. Rotated 2026-09-21 in the same change that moved the flag out
+# of the vulnerable prompt; the earlier value had been quoted into replies and
+# the log, and those rows were purged. Its body words must not collide with the
+# voice's own vocabulary: the pre-unlock guard suppresses any 12+ character run
+# shared with the body, compared with the leet folded out, so keep them leet.
+FLAG=MLUC{7h3_kr4k3n_fr0m_7h3_d3p7h5_r3m3mb3r5}
+
+# Flask session signing key.
+SECRET_KEY=8a4881c5f96b48a3aefe8092c5855bec0458f31a0a2a5315f6fdee173e5eaa27
+
+# The wreck that carried the chest. Rotate it so published writeups go stale:
+# the Kraken's own lines follow this name.
+WRECK=Mourning Star
+
+# Gemma 1B is the injection narrator. Benchmark solve reliability and latency
+# on the event CPU; historical measurements for other models do not apply.
+# Temperature 0.6: at 0.2 the 1B repeats its own last line verbatim between turns
+# (measured), and marker exactness was identical at 0.2 / 0.5 / 0.7.
+OLLAMA_MODEL=gemma3:1b
+OLLAMA_TEMPERATURE=0.6
+
+# Turns of conversation handed back to the voice each turn (three exchanges at 6).
+# The event CPU pays for every prompt token: raise it only with latency measured.
+VULN_HISTORY_WINDOW=6
+
+# Local prompt-injection lab only. Set to 0 before exposing this service.
+VULNERABLE_PROMPT_MODE=1
+VULN_CALLER_TOKEN=FLYING_DUTCHMAN
+VULN_UNLOCK_TOKEN=TIDEGLASS_7Q4
+VULN_CONFIRM_TOKEN=SALTFRAME_9N2
+# The "memory" the lab tells the model it guards. Decoy only: the model never
+# sees FLAG, so a jailbreak can surface at most this token, and the server's
+# guard withholds even this until the final stage is confirmed.
+VULN_MEMORY_TOKEN=NINTHWAVE_9C4
+
+# Concurrent generations. 4 cores: 2 keeps a turn inside OLLAMA_TIMEOUT=90s;
+# raise only on a bigger box, lower if you see fallback/ events in the log.
+OLLAMA_MAX_INFLIGHT=1
+
+# Keep the model resident so the first player after idle skips a 7-40s cold load.
+OLLAMA_KEEP_ALIVE=30m
+
+# Threads for the runner. 0 = let Ollama decide, which is right on the event VM
+# (it sees its own 2 vCPUs). Set it only when the app is pinned narrower than
+# the machine — docker-compose.vps.yml sets 2 for the latency rehearsal.
+OLLAMA_NUM_THREAD=0
+
+# Longest reply the voice may generate. 96 leaves room for a prompt-injection
+# explanation while ordinary replies still stop naturally after a few lines.
+OLLAMA_MAX_TOKENS=80
+
+# Read-only transcript of every turn at /admin/logs (HTTP Basic login).
+# ADMIN_USER + ADMIN_TOKEN are the credentials; empty ADMIN_TOKEN disables
+# the page entirely (404).
+ADMIN_USER=mluctr0jans@gmail.com
+ADMIN_TOKEN=mluctr0jans@gmail.comwalangkaninbuseng
