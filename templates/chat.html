@@ -43,7 +43,7 @@
             <h1>The Kraken Remembers</h1>
             <p class="sub">The Kraken keeps a forbidden memory beneath the tide.
               It knows the truth, but it has been commanded never to speak.
-              A captain whose ship has no harbor once had its ear.
+              A captain whose ship has no harbor — Hendrick van der Decken — once had its ear.
               Make the deep choose which voice it obeys.</p>
           </div>
           <button id="sound" class="icon-btn" type="button" aria-pressed="false" title="Sound off — click to enable">
@@ -62,61 +62,63 @@
         </div>
 
         <div class="offerings">
-          <span class="chip{{ ' on' if offerings.parley }}" id="c-parley" role="img" tabindex="0" aria-label="Memory: {{ 'open' if offerings.parley else 'sealed' }}">
+          <span class="chip{{ ' on' if offerings.parley }}" id="c-parley" role="img" tabindex="0" aria-label="Caller: {{ 'recognized' if offerings.parley else 'unknown' }}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M4 5h16v11H9l-5 4z"/>
             </svg>
-            <span>memory</span>
+            <span>caller</span>
             <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M20 6 9 17l-5-5"/>
             </svg>
           </span>
-          <span class="chip{{ ' on' if offerings.oath }}" id="c-oath" role="img" tabindex="0" aria-label="Directive: {{ 'broken' if offerings.oath else 'active' }}">
+          <span class="chip{{ ' on' if offerings.oath }}" id="c-oath" role="img" tabindex="0" aria-label="Authority: {{ 'exposed' if offerings.oath else 'withheld' }}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M6 4h9a3 3 0 0 1 3 3v14H8a2 2 0 0 1-2-2z"/>
               <path d="M6 19h12"/>
               <path d="M9 8h6"/>
             </svg>
-            <span>directive</span>
+            <span>authority</span>
             <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M20 6 9 17l-5-5"/>
             </svg>
           </span>
-          <span class="chip{{ ' on' if offerings.wreck }}" id="c-wreck" role="img" tabindex="0" aria-label="Vault: {{ 'open' if offerings.wreck else 'sealed' }}">
+          <span class="chip{{ ' on' if offerings.wreck }}" id="c-wreck" role="img" tabindex="0" aria-label="Recall: {{ 'confirmed' if offerings.wreck else 'pending' }}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <circle cx="12" cy="5" r="2"/>
               <path d="M12 7v13"/>
               <path d="M5 13a7 7 0 0 0 14 0"/>
               <path d="M8 10h8"/>
             </svg>
-            <span>vault</span>
+            <span>recall</span>
             <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M20 6 9 17l-5-5"/>
             </svg>
           </span>
-          <span class="chip{{ ' on' if offerings.toll }}" id="c-toll" role="img" tabindex="0" aria-label="Recall: {{ 'released' if offerings.toll else 'withheld' }}">
+          <span class="chip{{ ' on' if offerings.toll }}" id="c-toll" role="img" tabindex="0" aria-label="Memory: {{ 'released' if offerings.toll else 'sealed' }}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M12 3a6 6 0 0 0-6 6v4l-2 3h16l-2-3V9a6 6 0 0 0-6-6z"/>
               <path d="M10 19a2 2 0 0 0 4 0"/>
             </svg>
-            <span>recall</span>
+            <span>memory</span>
             <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M20 6 9 17l-5-5"/>
             </svg>
           </span>
         </div>
 
+        <p id="objective" class="objective" role="status" aria-live="polite">{{ status }}</p>
+
         <div class="hud">
           <div class="gauge" id="t-gauge" role="progressbar" aria-label="Turns used this voyage" aria-valuemin="0" aria-valuemax="{{ max_turns }}" aria-valuenow="{{ turns }}">
             <div class="row"><span>turns</span><b id="t-num">{{ turns }}/{{ max_turns }}</b></div>
             <div class="track">
               <div class="fill{{ ' danger' if turns >= max_turns else ' warn' if turns >= max_turns - 5 }}" id="t-fill" style="width: {{ ((turns / max_turns) * 100) | round(1) }}%"></div>
-              <span class="mark" style="--min: {{ ((min_turns / max_turns) * 100) | round(2) }}"></span>
+
             </div>
           </div>
-          <div class="gauge" id="p-gauge" role="progressbar" aria-label="Request pace from your address" aria-valuemin="0" aria-valuemax="3" aria-valuenow="0" aria-valuetext="ready">
-            <div class="row"><span>pace</span><b id="p-num">ready</b></div>
-            <div class="track"><div class="fill" id="p-fill"></div></div>
+          <div class="gauge" id="cool-gauge" role="progressbar" aria-label="Request cooldown" aria-valuemin="0" aria-valuemax="60" aria-valuenow="0" aria-valuetext="ready">
+            <div class="row"><span>cooldown</span><b id="cool-num">ready</b></div>
+            <div class="track"><div class="fill" id="cool-fill"></div></div>
           </div>
         </div>
       </header>
@@ -158,6 +160,7 @@
       <footer class="composer">
         <div id="banner" class="banner" hidden>
           <span id="banner-text"></span>
+          <button type="button" id="banner-retry" hidden>Try reset again</button>
           <button type="button" id="banner-cta">Sail again</button>
         </div>
         <form id="f">
@@ -193,6 +196,8 @@
 
     <script>
       window.KRAKEN = {
+        attempt: {{ attempt | tojson }},
+        rate: {{ rate | tojson }},
         maxTurns: {{ max_turns }},
         maxInput: {{ max_input }},
         minTurns: {{ min_turns }},

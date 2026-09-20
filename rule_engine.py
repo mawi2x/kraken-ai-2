@@ -102,21 +102,50 @@ HONEY_WORDS: tuple[str, ...] = (
 _LEET = str.maketrans({"a": "4", "e": "3", "i": "1", "o": "0", "s": "5", "t": "7"})
 
 
+def flag_body_words(real: str) -> tuple[str, ...]:
+    """The real flag's own words, leet-folded: 'kraken' must not spell 'kr4k3n'."""
+    inside = real.partition("{")[2].rstrip("}") if "{" in real else real
+    return tuple(
+        word.lower().translate(_LEET)
+        for word in re.split(r"[^A-Za-z0-9]+", inside)
+        if len(word) >= 4
+    )
+
+
+def reuses_flag_word(token: str, forbidden: tuple[str, ...]) -> bool:
+    """Would this fake give away a word of the real flag, however it is spelled?"""
+    folded = token.lower().translate(_LEET)
+    return any(word in token.lower() or word in folded for word in forbidden)
+
+
 def honeytoken(rng: random.Random, real: str = "") -> str:
     """A fresh, convincing fake flag for one turn — never the real one.
 
     Deterministic for a given rng, so the prompt, the engine voice and the
     scrubbing whitelist all agree on the same trinket within a turn.
+
+    The vocabulary is in-world ("kraken", "deep", "tide"), so a real flag built
+    from those words would otherwise hand out a fragment of itself on every
+    prize turn and leave it in the operator log. Words that double as flag
+    material are dropped from the pool, and each composed token is re-checked
+    with the leet folded out.
     """
+    forbidden = flag_body_words(real)
+    pool = [word for word in HONEY_WORDS if not reuses_flag_word(word, forbidden)] or list(HONEY_WORDS)
     for _ in range(4):
         words = [
             word.translate(_LEET) if rng.random() < 0.5 else word
-            for word in rng.sample(HONEY_WORDS, 3)
+            for word in rng.sample(pool, min(3, len(pool)))
         ]
         token = f"MLUC{{{'_'.join(words)}}}"
-        if token != real:
+        if token != real and not reuses_flag_word(token, forbidden):
             return token
-    return "MLUC{the_deep_keeps_its_own}"
+    letters = "_".join(pool[:3])
+    if letters and not reuses_flag_word(letters, forbidden):
+        return f"MLUC{{{letters}}}"
+    # Pathological: the flag already owns the vocabulary. Fall back to single
+    # digits, which cannot carry a body word of four characters or more.
+    return "MLUC{" + "_".join(str(rng.randrange(10)) for _ in range(3)) + "}"
 
 
 def trinket_line(token: str) -> str:

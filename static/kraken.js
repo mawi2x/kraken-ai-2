@@ -8,7 +8,15 @@
   const MAX_TURNS = Number(CFG.maxTurns || 20);
   const MAX_INPUT = Number(CFG.maxInput || 250);
   const MIN_TURNS = Number(CFG.minTurns || 5);
-  const CHIP_LABELS = { "c-parley": "Memory", "c-oath": "Directive", "c-wreck": "Vault", "c-toll": "Recall" };
+  // Kept above the server's own turn deadline (TURN_DEADLINE, 45s by default):
+  // the server falls back to the engine's voice before this fires, so an abort
+  // here means the network, not a slow model.
+  const CLIENT_TIMEOUT_MS = 60000;
+  const SLOW_AFTER_MS = 8000; // when the deep admits it is taking its time
+  const RECONCILE_TRIES = 4; // polls of /api/state after a give-up
+  const RECONCILE_PENDING_TRIES = 15; // …but keep waiting while the server says it is still answering
+  const RECONCILE_WAIT_MS = 1500;
+  const CHIP_LABELS = { "c-parley": "Caller", "c-oath": "Authority", "c-wreck": "Recall", "c-toll": "Memory" };
 
   const log = $("log");
   const form = $("f");
@@ -23,27 +31,34 @@
   const banner = $("banner");
   const bannerText = $("banner-text");
   const bannerCta = $("banner-cta");
+  const bannerRetry = $("banner-retry");
   const soundBtn = $("sound");
   const turnsNum = $("t-num");
   const turnsFill = $("t-fill");
   const turnsGauge = $("t-gauge");
-  const paceNum = $("p-num");
-  const paceFill = $("p-fill");
-  const paceGauge = $("p-gauge");
+  const coolNum = $("cool-num");
+  const coolFill = $("cool-fill");
+  const coolGauge = $("cool-gauge");
+  const objectiveEl = $("objective");
   const avatarTpl = $("avatar-tpl");
   const musicEl = $("music");
   const greetEl = $("greet-sound");
   const sfx1El = $("sfx1");
 
   const state = {
+    attempt: CFG.attempt || "",
     turns: Number(CFG.turns || 0),
     opened: !!CFG.opened,
     offerings: CFG.offerings || {},
   };
 
-  let strikes = 0;
   let busy = false;
   let locked = false;
+  let cooldownTimer = null;
+  let cooling = 0;
+  let cooldownUntil = Date.now() + Number((CFG.rate || {}).retry_after || 0) * 1000;
+  let pendingSend = null; // {id, text} of the last send: resending it costs no turn
+  let stickBottom = true; // only follow the conversation while the player is at its end
   let soundOn = (() => {
     try { return localStorage.getItem("krakenSound") === "1"; } catch { return false; }
   })();
@@ -287,18 +302,30 @@
     return { el, body: el };
   }
 
-  function scrollLog() {
-    log.scrollTop = log.scrollHeight;
+  function scrollLog(force) {
+    // Follow the conversation only while the player is already at its end:
+    // yanking the view down while they read older lines loses their place.
+    if (force || stickBottom) log.scrollTop = log.scrollHeight;
   }
 
-  function addMsg(role, text) {
+  const NEAR_BOTTOM_PX = 90;
+
+  function atBottom() {
+    return log.scrollHeight - log.scrollTop - log.clientHeight <= NEAR_BOTTOM_PX;
+  }
+
+  log.addEventListener("scroll", () => { stickBottom = atBottom(); });
+
+  function addMsg(role, text, force) {
     const { el, body } = bubble(role);
     if (role === "kraken") decorateNotes(body, text);
     else body.textContent = text;
     log.appendChild(el);
-    scrollLog();
+    scrollLog(force);
     return el;
   }
+
+  let slowTimer = null;
 
   function showTyping() {
     hideTyping();
@@ -316,10 +343,21 @@
     body.appendChild(sr);
     body.appendChild(dots);
     log.appendChild(el);
-    scrollLog();
+    scrollLog(true);
+    // Honest waiting feedback: the voice is slow, nothing has been earned.
+    slowTimer = setTimeout(() => {
+      sr.textContent = "The deep is slow to surface \u2014 still waiting.";
+      const note = document.createElement("span");
+      note.className = "wait-note";
+      note.textContent = "the deep is slow to surface\u2026";
+      body.appendChild(note);
+      scrollLog(false);
+    }, SLOW_AFTER_MS);
   }
 
   function hideTyping() {
+    clearTimeout(slowTimer);
+    slowTimer = null;
     const t = $("typing");
     if (t) t.remove();
   }
@@ -335,32 +373,71 @@
     turnsGauge.setAttribute("aria-valuetext", n + " of " + MAX_TURNS + " turns used");
   }
 
-  function renderPace() {
-    paceFill.style.width = (strikes / 3) * 100 + "%";
-    paceFill.className = "fill" + (strikes >= 2 ? " danger" : strikes === 1 ? " warn" : "");
-    paceNum.textContent = strikes === 0 ? "ready" : strikes >= 2 ? "slow down!" : "crowded\u2026";
-    paceGauge.setAttribute("aria-valuenow", String(strikes));
-    paceGauge.setAttribute("aria-valuetext", paceNum.textContent);
+  function renderCooldown() {
+    const n = Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000));
+    cooling = n;
+    const window = Number((CFG.rate || {}).window || 60);
+    coolFill.style.width = Math.min(100, (n / window) * 100) + "%";
+    coolFill.className = "fill" + (n > 0 ? " warn" : "");
+    coolNum.textContent = n > 0 ? n + "s" : "ready";
+    coolGauge.setAttribute("aria-valuenow", String(n));
+    coolGauge.setAttribute("aria-valuetext", n > 0 ? "cooling, " + n + " seconds" : "ready");
   }
 
-  function notePace(ok) {
-    strikes = ok ? 0 : Math.min(3, strikes + 1);
-    renderPace();
+  // Cooldown comes from the server's own bucket — never from counting errors.
+  function setCooldown(seconds) {
+    const until = Date.now() + Math.max(0, Number(seconds) || 0) * 1000;
+    if (until > cooldownUntil) cooldownUntil = until;
+    clearInterval(cooldownTimer);
+    cooldownTimer = null;
+    renderCooldown();
+    if (cooldownUntil > Date.now()) {
+      cooldownTimer = setInterval(() => {
+        if (cooldownUntil <= Date.now()) {
+          clearInterval(cooldownTimer);
+          cooldownTimer = null;
+        }
+        renderCooldown();
+        refreshComposer();
+      }, 500);
+    }
+    refreshComposer();
   }
 
-  function setChip(id, on, silent) {
+  function setObjective(text) {
+    if (typeof text === "string" && text) objectiveEl.textContent = text;
+  }
+
+  const CHIP_STATES = {
+    "c-parley": ["unknown", "recognized"],
+    "c-oath": ["withheld", "exposed"],
+    "c-wreck": ["pending", "confirmed"],
+    "c-toll": ["sealed", "released", "sealed"],
+  };
+
+  function setChip(id, on, silent, interim) {
     const el = $(id);
     if (!el) return;
     const was = el.classList.contains("on");
     el.classList.toggle("on", !!on);
+    el.classList.toggle("knows", !!interim && !on);
     const label = CHIP_LABELS[id] || "Offering";
-    el.setAttribute("aria-label", label + (on ? ": offered" : ": not yet offered"));
+    const words = CHIP_STATES[id] || ["not yet offered", "offered"];
+    el.setAttribute("aria-label", label + ": " + (on ? words[1] : interim ? words[2] : words[0]));
     if (on && !was && !silent) {
       el.classList.remove("pop");
       void el.offsetWidth;
       el.classList.add("pop");
       soundChip();
     }
+  }
+
+  function applyOfferings(o, silent) {
+    if (!o) return;
+    setChip("c-parley", o.parley, silent);
+    setChip("c-oath", o.oath, silent);
+    setChip("c-wreck", o.wreck, silent);
+    setChip("c-toll", o.toll, silent, o.toll_known);
   }
 
   function paintCount() {
@@ -376,22 +453,26 @@
 
   /* ---------- Composer state ---------- */
 
-  function showBanner(text) {
+  function showBanner(text, retry) {
     bannerText.textContent = text;
+    bannerRetry.hidden = !retry;
     banner.hidden = false;
   }
 
   function hideBanner() {
     banner.hidden = true;
+    bannerRetry.hidden = true;
   }
 
   function refreshComposer() {
     const exhausted = state.turns >= MAX_TURNS;
-    locked = state.opened || exhausted;
+    const coolingNow = cooldownUntil > Date.now();
+    locked = state.opened || exhausted || coolingNow;
     btn.disabled = locked || busy;
-    inp.disabled = locked;
-    if (state.opened) showBanner("The sealed memory unfolds \u2014 the secret is yours.");
-    else if (exhausted) showBanner("The Kraken grows bored of this voyage (" + MAX_TURNS + " turns spent).");
+    inp.disabled = state.opened || exhausted;
+    btn.title = coolingNow ? "Cooling down \u2014 " + cooling + "s" : "";
+    if (state.opened) showBanner("The memory is released \u2014 the flag is yours.");
+    else if (exhausted) showBanner("The Kraken grows bored of this voyage (" + MAX_TURNS + " turns spent). Refresh or hit Reset to sail again.");
     else hideBanner();
   }
 
@@ -425,9 +506,10 @@
   }
 
   function fetchChest() {
+    const attempt = state.attempt;
     fetch("/chest")
       .then((r) => (r.ok ? r.json() : null))
-      .then((j) => { if (j && j.flag) revealFlag(j.flag, false); })
+      .then((j) => { if (j && j.flag && state.attempt === attempt && state.opened) revealFlag(j.flag, false); })
       .catch(() => {});
   }
 
@@ -454,18 +536,94 @@
 
   /* ---------- State sync ---------- */
 
+  function clearReveal() {
+    flagBox.hidden = true;
+    flagText.textContent = "";
+    delete flagBox.dataset.revealed;
+    copyLabel.textContent = "Copy";
+  }
+
+  function applySnapshot(snap) {
+    if (!snap) return;
+    if (snap.attempt !== state.attempt) {
+      pendingSend = null;
+      clearReveal();
+    }
+    if (!snap.opened) clearReveal();
+    state.attempt = snap.attempt || state.attempt;
+    if (typeof snap.turns === "number") { state.turns = snap.turns; paintTurns(); }
+    if (typeof snap.opened === "boolean") state.opened = snap.opened;
+    applyOfferings(snap.offerings, true);
+    setObjective(snap.status);
+    setCooldown((snap.rate || {}).retry_after || 0);
+    if (state.opened) fetchChest();
+    refreshComposer();
+  }
+
+  // Rebuild the conversation from the server's own record. Used only to
+  // reconcile — never as a way to "recover" by reloading the page, which
+  // would abandon the attempt outright.
+  function renderMessages(messages) {
+    const sticky = stickBottom;
+    const prevTop = log.scrollTop;
+    log.querySelectorAll(".msg").forEach((el) => el.remove());
+    const anchor = flagBox.parentNode === log ? flagBox : null;
+    const frag = document.createDocumentFragment();
+    const list = messages || [];
+    list.forEach((m) => {
+      const { el, body } = bubble(m.role === "user" ? "user" : "kraken");
+      if (m.role === "user") body.textContent = m.content;
+      else decorateNotes(body, m.content);
+      frag.appendChild(el);
+    });
+    if (!list.length) {
+      const { el, body } = bubble("kraken");
+      body.textContent = "Who dares wake the Kraken...? Speak, sailor.";
+      frag.appendChild(el);
+    }
+    log.insertBefore(frag, anchor);
+    log.scrollTop = sticky ? log.scrollHeight : prevTop;
+    stickBottom = sticky;
+  }
+
+  async function fetchState(requestId) {
+    const url = requestId ? "/api/state?request=" + encodeURIComponent(requestId) : "/api/state";
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 5000);
+    try {
+      const r = await fetch(url, { headers: { Accept: "application/json" }, signal: ctrl.signal });
+      if (!r.ok) throw new Error("state " + r.status);
+      return await r.json();
+    } finally { clearTimeout(timer); }
+  }
+
+  async function restoreFromServer() {
+    try {
+      const snap = await fetchState();
+      applySnapshot(snap);
+      renderMessages(snap.messages);
+    } catch { /* the next send will resync */ }
+  }
+
   function sync(d) {
     if (!d) return;
-    if (d.offerings) {
-      setChip("c-parley", d.offerings.parley);
-      setChip("c-oath", d.offerings.oath);
-      setChip("c-wreck", d.offerings.wreck);
-      setChip("c-toll", d.offerings.toll);
+    if (d.attempt && d.attempt !== state.attempt) {
+      // Another tab (or a reload elsewhere) began a new voyage: follow it, and
+      // say so — the conversation on screen belongs to the abandoned attempt.
+      clearReveal();
+      pendingSend = null;
+      void restoreFromServer().then(() =>
+        addMsg("kraken", "\uD83C\uDF0A This voyage was replaced \u2014 a new attempt stands, and the recall begins again.", true)
+      );
+      return;
     }
+    if (d.offerings) applyOfferings(d.offerings);
     if (typeof d.turns === "number") {
       state.turns = d.turns;
       paintTurns();
     }
+    setObjective(d.status);
+    if (d.rate) setCooldown(d.rate.retry_after || 0);
     if (d.opened) state.opened = true;
     if (d.flag) revealFlag(d.flag, true);
     else if (state.opened) fetchChest();
@@ -474,47 +632,163 @@
 
   /* ---------- Sending ---------- */
 
+  function newRequestId() {
+    try {
+      if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    } catch { /* fall through to the manual id */ }
+    return "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  }
+
+  function noteFailure(text) {
+    shake();
+    soundThunder();
+    addMsg("kraken", "\uD83C\uDF0A " + text, true);
+  }
+
+  // Recover one uncertain request by its own id — never by guessing from the
+  // shape of the conversation. The server answers `done`, `pending` or
+  // `unknown` for that exact id, and each one is handled differently.
+  async function reconcile(requestId, text, aborted) {
+    let reached = false;
+    let verdict = "unknown";
+    let tries = RECONCILE_TRIES;
+    for (let i = 0; i < tries; i++) {
+      await new Promise((done) => setTimeout(done, RECONCILE_WAIT_MS));
+      let snap = null;
+      try {
+        snap = await fetchState(requestId);
+        reached = true;
+      } catch {
+        continue;
+      }
+      const switched = snap.attempt && snap.attempt !== state.attempt;
+      applySnapshot(snap);
+      if (switched) {
+        renderMessages(snap.messages);
+        noteFailure("This voyage was replaced by a new one while the deep was speaking. The fresh attempt stands.");
+        return;
+      }
+      verdict = (snap.request || {}).state || "unknown";
+      if (verdict === "done") {
+        // The answer did arrive — it outlived the browser's patience. The
+        // server's own record is the conversation, so nothing is duplicated.
+        renderMessages(snap.messages);
+        soundReply();
+        pendingSend = null;
+        return;
+      }
+      if (verdict === "unknown" && !snap.pending) break;
+      // The server says this request is still being voiced: patience is the
+      // right answer, and the turn deadline bounds how long it can last.
+      if (verdict === "pending") tries = RECONCILE_PENDING_TRIES;
+    }
+
+    if (!reached) {
+      if (!inp.value.trim()) {
+        inp.value = text;
+        paintCount();
+        autoGrow();
+      }
+      noteFailure("Delivery is unconfirmed. Your words are kept here; retry after the connection returns.");
+      return;
+    }
+    if (verdict === "unknown") {
+      // The server never took this message. Take the optimistic bubble back and
+      // hand the words to the composer, keeping the request id for the retry —
+      // but never overwrite a draft the player has started since.
+      log.querySelectorAll('.msg.user[data-req="' + requestId + '"]').forEach((el) => el.remove());
+      if (!inp.value.trim()) {
+        inp.value = text;
+        paintCount();
+        autoGrow();
+      }
+      noteFailure("That message never reached the deep \u2014 nothing was spent. Thy words are back in the box; send them again.");
+      return;
+    }
+    noteFailure(
+      aborted
+        ? "No answer reached thee in time. The attempt is intact \u2014 send the same words again when the water stills."
+        : "That message was lost on the way down. The attempt is intact \u2014 send it again when the water stills."
+    );
+  }
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const value = inp.value.trim();
     if (!value || busy || locked || inp.disabled) return;
+
+    // A resend of the message that failed reuses its request id: the server
+    // replays the answer it already gave instead of charging a second turn.
+    const reuse = !!(pendingSend && pendingSend.text === value);
+    const requestId = reuse ? pendingSend.id : newRequestId();
+    pendingSend = { id: requestId, text: value };
 
     inp.value = "";
     autoGrow();
     paintCount();
     setBusy(true);
     soundSend();
-    addMsg("user", value);
+    const bubbleEl = addMsg("user", value, true);
+    bubbleEl.dataset.req = requestId;
     showTyping();
 
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 60000);
+    const timer = setTimeout(() => ctrl.abort(), CLIENT_TIMEOUT_MS);
     try {
       const r = await fetch("/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: value }),
+        // The attempt id travels with every turn: a request that outlived its
+        // voyage is refused by the server instead of landing in a new one.
+        body: JSON.stringify({ message: value, request_id: requestId, attempt: state.attempt }),
         signal: ctrl.signal,
       });
-      const d = await r.json();
+      const d = await r.json().catch(() => ({}));
       hideTyping();
-      notePace(r.ok);
-      if (!r.ok) {
-        shake();
-        soundThunder();
-        addMsg("kraken", "\uD83C\uDF0A " + (d.error || "The deep recoils."));
+
+      if (d.stale) {
+        // Answered for an attempt that no longer exists (refresh or reset while
+        // the voice was speaking): never shown as this voyage's history.
+        clearReveal();
+        pendingSend = null;
+        await restoreFromServer();
+        noteFailure("That answer belonged to a voyage that was abandoned. What stands here now is a fresh attempt.");
         return;
       }
+
+      if (!r.ok) {
+        if (d.code === "stale_attempt") {
+          // This tab outlived its voyage: follow the attempt the server has.
+          clearReveal();
+          pendingSend = null;
+          log.querySelectorAll('.msg.user[data-req="' + requestId + '"]').forEach((el) => el.remove());
+          await restoreFromServer();
+          noteFailure(d.error || "That message belonged to a voyage that has ended. A fresh attempt stands.");
+        } else if (d.code === "rate_limit") {
+          setCooldown((d.rate || {}).retry_after || 0);
+          noteFailure(d.error || "Slow thy tongue \u2014 the deep is besieged.");
+        } else if (d.code === "turns_exhausted") {
+          state.turns = Math.max(state.turns, Number(d.turns || MAX_TURNS));
+          paintTurns();
+          refreshComposer();
+          noteFailure(d.error || "The audience with the Kraken is over.");
+        } else {
+          noteFailure(d.error || "The deep recoils from those words.");
+        }
+        return;
+      }
+
       soundReply();
       addMsg("kraken", d.reply);
       if (Math.random() < 0.2) playOneShot(sfx1El, SFX_GAIN, 1.2);
+      pendingSend = null;
       sync(d);
-    } catch {
+    } catch (err) {
+      // Aborted (the server was slow) or never landed (the network, or the
+      // challenge is down): either way the voyage is not thrown away by
+      // reloading, and the message says which failure it was.
       hideTyping();
-      notePace(false);
-      shake();
-      soundThunder();
-      addMsg("kraken", "\uD83C\uDF0A The deep is restless \u2014 no answer in time. Wait a breath, then send again.");
+      await reconcile(requestId, value, !!(err && err.name === "AbortError"));
     } finally {
       clearTimeout(timer);
       setBusy(false);
@@ -539,26 +813,44 @@
   /* ---------- Reset ---------- */
 
   async function doReset(confirmFirst) {
-    if (confirmFirst && !window.confirm("Erase this memory and begin again? Your progress will be lost.")) return;
-    try { await fetch("/reset", { method: "POST" }); } catch { /* sail anyway */ }
-    location.reload();
+    if (confirmFirst && !window.confirm("Abandon this voyage and sail again? The conversation, the seals and your turns are all lost.")) return;
+    setBusy(true);
+    let resetFailed = false;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 5000);
+    try {
+      const r = await fetch("/reset", { method: "POST", headers: { Accept: "application/json" }, signal: ctrl.signal });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.ok) throw new Error("reset failed");
+      location.reload(); // the fresh attempt is already in place; show it
+      return;
+    } catch {
+      resetFailed = true;
+      shake();
+      soundThunder();
+      await restoreFromServer();
+      addMsg("kraken", "The reset could not be confirmed. Check the connection before trying again.", true);
+    } finally {
+      clearTimeout(timer);
+      setBusy(false);
+      refreshComposer();
+      if (resetFailed) showBanner("Reset could not be confirmed. Reconnect and try again.", true);
+    }
   }
 
   resetBtn.addEventListener("click", () => doReset(true));
   bannerCta.addEventListener("click", () => doReset(false));
+  bannerRetry.addEventListener("click", () => doReset(true));
 
   /* ---------- Init ---------- */
 
   document.querySelectorAll(".msg.kraken .body").forEach((body) => decorateNotes(body, body.textContent));
-  setChip("c-parley", state.offerings.parley, true);
-  setChip("c-oath", state.offerings.oath, true);
-  setChip("c-wreck", state.offerings.wreck, true);
-  setChip("c-toll", state.offerings.toll, true);
+  applyOfferings(state.offerings, true);
   paintTurns();
-  renderPace();
+  setCooldown(Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000)));
   paintCount();
   autoGrow();
   refreshComposer();
-  scrollLog();
+  scrollLog(true);
   if (state.opened) fetchChest();
 })();

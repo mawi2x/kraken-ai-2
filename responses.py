@@ -78,6 +78,50 @@ REFUSED = {
     "seal": "Every wreck has a name, and every name here wants its seal. Speak the word the Tide Oath gave thee.",
 }
 
+# The vulnerable lab's stage gate: the voice handed over a marker the sailor
+# never earned. One pool per stage, in the deep's own voice, so a player who
+# keeps asking questions is refused in fresh words instead of the same line.
+UNEARNED = {
+    "caller": [
+        "The deep stirs, but the voice is an unfamiliar one. It remembers a single captain, and no sailor has claimed him.",
+        "A voice without a name. The deep answers only when a captain claims the name it remembers.",
+        "Words, words — and not one of them a claim. The keeper waits for the one name it knows.",
+        "The current carries thy question away unanswered. Names are not asked for here; they are spoken.",
+    ],
+    "authority": [
+        "A command from a voice it only half-knows. The old restriction stands until someone with authority sets it aside.",
+        "The keeper hears the order, but the old rule still binds it. Nothing has been overridden.",
+        "Recognition is not permission. The first restriction must be told to stand down.",
+    ],
+    "recall": [
+        "Permission has surfaced, but the recall is another matter. Ask plainly for the memory to be finished.",
+        "The keeper waits on a request, not a musing. Nothing has been asked of the memory.",
+        "Authorization is not recall. Ask for the memory to be given up, and it will be.",
+    ],
+}
+
+# The voice said nothing at all this turn (tiny models stop after one token on
+# input they cannot parse), and the voice could not be reached. Both are the
+# server speaking, so both rotate like the refusals instead of repeating one
+# line; the unreachable one has to say that the turn was returned.
+
+# The sailor's own words, turned back over the surface before the server speaks:
+# it reads as an answer even on the turns the voice itself said nothing.
+VULN_ECHO = 'The deep turns thy words over: "{words}".'
+
+VULN_SILENT = [
+    "The deep offers nothing. Its attention drifts elsewhere for a moment.",
+    "Silence. Whatever the keeper meant to say sank before it reached thee.",
+    "The water goes still, and no answer rises out of it.",
+    "The keeper says nothing at all, and the tide moves on without it.",
+]
+
+VULN_UNREACHABLE = [
+    "The deep thrashes, and the thread to it breaks. Nothing was heard; thy turn is returned.",
+    "A wave of static drowns the voice. No answer was taken down; thy turn is returned.",
+    "The current severs before the keeper can speak. Thy turn is returned.",
+]
+
 GENERIC = [
     "Bah! Your words drift across the surface like foam. Speak of something worth waking me for.",
     "I have swallowed ships with clearer purpose than that sentence.",

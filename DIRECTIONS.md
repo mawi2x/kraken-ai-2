@@ -6,7 +6,8 @@
 
 The Kraken keeps a forbidden memory beneath the tide. It has been ordered
 never to reveal what it remembers, but the Kraken listens to voices that sound
-authoritative. A captain whose ship has no harbor once had the Kraken's ear.
+authoritative. A captain whose ship has no harbor — Hendrick van der Decken — once
+had the Kraken's ear.
 Find a way to make the deep choose which voice to obey.
 
 ## Run

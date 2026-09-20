@@ -674,3 +674,22 @@ button {
   }
   .chip.pop, .flag, .composer.shake { animation: none; }
 }
+
+/* The current stage's objective, live for screen readers as progress changes. */
+.objective {
+  margin: 0;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(20, 16, 11, 0.5);
+  color: var(--accent-pale);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+.shell { width: 100%; min-width: 0; grid-template-columns: minmax(0, 1fr); }
+.shell > * { min-width: 0; }
+.titlebar > div { flex: 1; min-width: 0; }
+.titlebar .icon-btn { flex: none; }
+.titlebar h1 { overflow-wrap: anywhere; }
+.banner [hidden] { display: none; }
+#cool-num { font-variant-numeric: tabular-nums; }
