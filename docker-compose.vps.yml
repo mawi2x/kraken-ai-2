@@ -1,0 +1,33 @@
+# Latency rehearsal: squeeze the local stack down to the event VPS.
+#
+# The box this ships to is a Google Compute Engine VM — 2 vCPU AMD EPYC 7B12,
+# 7.76 GiB RAM, no GPU. Unconstrained, this workstation answers a turn with 8
+# threads and a Vulkan iGPU, which is not the latency a player will feel.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.vps.yml up -d --build
+#   docker compose -f docker-compose.yml -f docker-compose.vps.yml down
+#
+# Both services are pinned to CPUs 0-1 and share a 2-CPU quota, exactly the way
+# the Flask app and the model compete for the same two vCPUs on the VM. cpuset
+# (not just a quota) matters: it is what makes the container report 2 CPUs, so
+# ollama spawns 2 inference threads instead of throttling 8 of them.
+#
+# Known gap: an EPYC 7B12 core runs at 2.25 GHz, the workstation's at up to
+# 4.4. Two cores here still answer somewhat faster than two cores there, so
+# treat these numbers as the optimistic end of what the VPS will do.
+
+services:
+  ai2:
+    cpus: "2.0"
+    cpuset: "0,1"
+    mem_limit: 512m
+    environment:
+      # Ollama would otherwise start 8 threads (its default comes from the
+      # machine's CPU count, not the pin) and crawl at 0.4 tok/s.
+      - OLLAMA_NUM_THREAD=2
+
+  ollama:
+    cpus: "2.0"
+    cpuset: "0,1"
+    mem_limit: 6g

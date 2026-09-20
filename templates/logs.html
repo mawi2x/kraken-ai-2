@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Kraken's Last Oath — transcript</title>
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        margin: 0; padding: 1.5rem 1.25rem 3rem;
+        background: #05090b; color: #f7e8d4;
+        font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      h1 { font-size: 1.15rem; margin: 0 0 .35rem; letter-spacing: .02em; }
+      .meta { color: #c3a68b; margin: 0 0 1rem; }
+      form { display: flex; flex-wrap: wrap; gap: .5rem; align-items: end; margin-bottom: 1rem; }
+      label { display: flex; flex-direction: column; gap: .25rem; color: #c3a68b; font-size: .75rem; }
+      input, button {
+        background: #14100b; color: inherit; border: 1px solid rgba(255, 152, 82, .34);
+        border-radius: .4rem; padding: .35rem .5rem; font: inherit;
+      }
+      input { width: 11rem; }
+      button { cursor: pointer; border-color: rgba(255, 138, 61, .55); }
+      button:hover { background: #241708; }
+      a { color: #ffb35c; }
+      table { border-collapse: collapse; width: 100%; }
+      th, td { text-align: left; vertical-align: top; padding: .3rem .5rem; border-bottom: 1px solid rgba(255, 152, 82, .12); }
+      th { position: sticky; top: 0; background: #05090b; color: #c3a68b; font-weight: 600; }
+      tr.user td.role { color: #ffb35c; }
+      tr.assistant td.role { color: #ffd489; }
+      td.time, td.sid, td.ip { white-space: nowrap; color: #c3a68b; }
+      td.event { white-space: nowrap; color: #e0c3a4; }
+      td.content { white-space: pre-wrap; word-break: break-word; }
+      .empty { color: #c3a68b; padding: 1rem 0; }
+    </style>
+  </head>
+  <body>
+    <h1>Kraken's Last Oath — transcript</h1>
+    <p class="meta">
+      {{ total }} rows · {{ sessions }} sessions · showing {{ rows|length }}
+      (newest first, limit {{ limit }})
+      · <a href="?limit={{ limit }}&amp;format=json{% if sid %}&amp;sid={{ sid }}{% endif %}{% if q %}&amp;q={{ q }}{% endif %}">json</a>
+    </p>
+
+    <form method="get">
+      <label>limit<input name="limit" value="{{ limit }}" inputmode="numeric"></label>
+      <label>session<input name="sid" value="{{ sid }}" placeholder="8-char prefix"></label>
+      <label>contains<input name="q" value="{{ q }}" placeholder="substring"></label>
+      <button type="submit">Filter</button>
+    </form>
+
+    {% if rows %}
+      <table>
+        <thead>
+          <tr><th>#</th><th>time (UTC)</th><th>session</th><th>ip</th><th>role</th><th>event</th><th>content</th></tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            <tr class="{{ row.role }}">
+              <td>{{ row.id }}</td>
+              <td class="time">{{ row.time }}</td>
+              <td class="sid">{{ row.sid }}</td>
+              <td class="ip">{{ row.ip }}</td>
+              <td class="role">{{ row.role }}</td>
+              <td class="event">{{ row.event }}</td>
+              <td class="content">{{ row.content }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="empty">Nothing logged for that filter.</p>
+    {% endif %}
+  </body>
+</html>

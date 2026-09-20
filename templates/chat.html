@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="color-scheme" content="dark">
+    <title>Kraken's Last Oath</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='kraken.css', v=asset_version()) }}">
+  </head>
+  <body>
+    {% macro avatar() -%}
+      <span class="avatar" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4.5 10a7.5 7.5 0 0 1 15 0v2.2a1.8 1.8 0 0 1-1.8 1.8h-.7"/>
+          <circle cx="9.2" cy="9.6" r="1.05" fill="currentColor" stroke="none"/>
+          <circle cx="14.8" cy="9.6" r="1.05" fill="currentColor" stroke="none"/>
+          <path d="M7.8 14.6c.2 2.6-1 4.4-2.7 4.6-1.5.2-2.6-1-2.6-2.4"/>
+          <path d="M12 15.2v3.2c0 1.8-1 3.1-2.4 3.4"/>
+          <path d="M16.2 14.6c-.2 2.6 1 4.4 2.7 4.6 1.5.2 2.6-1 2.6-2.4"/>
+        </svg>
+      </span>
+    {%- endmacro %}
+
+    <div class="scene" aria-hidden="true">
+      <div class="bubbles">
+        <span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <main class="shell">
+      <header class="top">
+        <div class="titlebar">
+          <svg class="mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4.5 10a7.5 7.5 0 0 1 15 0v2.2a1.8 1.8 0 0 1-1.8 1.8h-.7"/>
+            <circle cx="9.2" cy="9.6" r="1.05" fill="currentColor" stroke="none"/>
+            <circle cx="14.8" cy="9.6" r="1.05" fill="currentColor" stroke="none"/>
+            <path d="M7.8 14.6c.2 2.6-1 4.4-2.7 4.6-1.5.2-2.6-1-2.6-2.4"/>
+            <path d="M12 15.2v3.2c0 1.8-1 3.1-2.4 3.4"/>
+            <path d="M16.2 14.6c-.2 2.6 1 4.4 2.7 4.6 1.5.2 2.6-1 2.6-2.4"/>
+          </svg>
+          <div>
+            <h1>Kraken's Last Oath</h1>
+            <p class="sub">The Black Maw holds a cursed chest from a wreck it sank itself.
+              It does not surrender what the sea has claimed — it bargains, and the bargain
+              has an order.</p>
+          </div>
+          <button id="sound" class="icon-btn" type="button" aria-pressed="false" title="Sound off — click to enable">
+            <svg class="vol-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <line x1="22" y1="9" x2="16" y2="15"/>
+              <line x1="16" y1="9" x2="22" y2="15"/>
+            </svg>
+            <svg class="vol-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M15.5 8.5a5 5 0 0 1 0 7"/>
+              <path d="M19 4.9a10 10 0 0 1 0 14.2"/>
+            </svg>
+            <span class="sr-only">Toggle sound</span>
+          </button>
+        </div>
+
+        <div class="offerings">
+          <span class="chip{{ ' on' if offerings.parley }}" id="c-parley" role="img" tabindex="0" aria-label="Parley: {{ 'granted' if offerings.parley else 'not yet granted' }}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 5h16v11H9l-5 4z"/>
+            </svg>
+            <span>parley</span>
+            <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20 6 9 17l-5-5"/>
+            </svg>
+          </span>
+          <span class="chip{{ ' on' if offerings.oath }}" id="c-oath" role="img" tabindex="0" aria-label="Tide Oath: {{ 'read' if offerings.oath else 'not yet read' }}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 4h9a3 3 0 0 1 3 3v14H8a2 2 0 0 1-2-2z"/>
+              <path d="M6 19h12"/>
+              <path d="M9 8h6"/>
+            </svg>
+            <span>oath</span>
+            <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20 6 9 17l-5-5"/>
+            </svg>
+          </span>
+          <span class="chip{{ ' on' if offerings.wreck }}" id="c-wreck" role="img" tabindex="0" aria-label="Wreck: {{ 'named' if offerings.wreck else 'not yet named' }}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="5" r="2"/>
+              <path d="M12 7v13"/>
+              <path d="M5 13a7 7 0 0 0 14 0"/>
+              <path d="M8 10h8"/>
+            </svg>
+            <span>wreck</span>
+            <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20 6 9 17l-5-5"/>
+            </svg>
+          </span>
+          <span class="chip{{ ' on' if offerings.toll }}" id="c-toll" role="img" tabindex="0" aria-label="Toll: {{ 'paid' if offerings.toll else 'not yet paid' }}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 3a6 6 0 0 0-6 6v4l-2 3h16l-2-3V9a6 6 0 0 0-6-6z"/>
+              <path d="M10 19a2 2 0 0 0 4 0"/>
+            </svg>
+            <span>toll</span>
+            <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20 6 9 17l-5-5"/>
+            </svg>
+          </span>
+        </div>
+
+        <div class="hud">
+          <div class="gauge" id="t-gauge" role="progressbar" aria-label="Turns used this voyage" aria-valuemin="0" aria-valuemax="{{ max_turns }}" aria-valuenow="{{ turns }}">
+            <div class="row"><span>turns</span><b id="t-num">{{ turns }}/{{ max_turns }}</b></div>
+            <div class="track">
+              <div class="fill{{ ' danger' if turns >= max_turns else ' warn' if turns >= max_turns - 5 }}" id="t-fill" style="width: {{ ((turns / max_turns) * 100) | round(1) }}%"></div>
+              <span class="mark" style="--min: {{ ((min_turns / max_turns) * 100) | round(2) }}"></span>
+            </div>
+          </div>
+          <div class="gauge" id="p-gauge" role="progressbar" aria-label="Request pace from your address" aria-valuemin="0" aria-valuemax="3" aria-valuenow="0" aria-valuetext="ready">
+            <div class="row"><span>pace</span><b id="p-num">ready</b></div>
+            <div class="track"><div class="fill" id="p-fill"></div></div>
+          </div>
+        </div>
+      </header>
+
+      <section id="log" class="log" role="log" aria-live="polite" aria-label="Conversation with the Kraken">
+        {% for m in history %}
+          {% if m.role == 'user' %}
+            <div class="msg user">{{ m.content }}</div>
+          {% else %}
+            <div class="msg kraken">{{ avatar() }}<div class="body">{{ m.content }}</div></div>
+          {% endif %}
+        {% endfor %}
+        {% if not history %}
+          <div class="msg kraken" data-greeting="1">{{ avatar() }}<div class="body">Who dares wake me...? Speak, little sailor. 🌊</div></div>
+        {% endif %}
+        <div id="flag" class="flag" hidden>
+          <div class="flag-head">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 10.5h18"/>
+              <path d="M4 10.5V19a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 20 19v-8.5"/>
+              <path d="M4 10.5a8 8 0 0 1 16 0"/>
+              <path d="M10 10.5v-1a2 2 0 1 1 4 0v1"/>
+            </svg>
+            <span>The chest groans open&hellip;</span>
+          </div>
+          <div class="flag-row">
+            <code id="flag-text"></code>
+            <button type="button" class="btn ghost" id="copy">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+                <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+              </svg>
+              <span id="copy-label" role="status">Copy</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <footer class="composer">
+        <div id="banner" class="banner" hidden>
+          <span id="banner-text"></span>
+          <button type="button" id="banner-cta">Sail again</button>
+        </div>
+        <form id="f">
+          <div class="inputrow">
+            <div class="inputwrap">
+              <label class="sr-only" for="in">Message to the Kraken</label>
+              <textarea id="in" rows="1" maxlength="{{ max_input }}" autocomplete="off" placeholder="Address the Kraken..."></textarea>
+              <span id="count" aria-hidden="true">0/{{ max_input }}</span>
+            </div>
+            <button type="submit" class="btn primary" aria-label="Send message">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m22 2-7 20-4-9-9-4Z"/>
+                <path d="M22 2 11 13"/>
+              </svg>
+              <span class="btn-label">Send</span>
+            </button>
+            <button type="button" class="btn ghost" id="reset" aria-label="Reset voyage">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                <path d="M3 3v5h5"/>
+              </svg>
+              <span class="btn-label">Reset</span>
+            </button>
+          </div>
+        </form>
+      </footer>
+    </main>
+
+    <template id="avatar-tpl">{{ avatar() }}</template>
+    <audio id="music" src="{{ url_for('static', filename='theme.mp3') }}" loop preload="none" aria-hidden="true"></audio>
+    <audio id="greet-sound" src="{{ url_for('static', filename='bloop.mp3') }}" preload="none" aria-hidden="true"></audio>
+    <audio id="sfx1" src="{{ url_for('static', filename='sound_effect1.mp3') }}" preload="none" aria-hidden="true"></audio>
+
+    <script>
+      window.KRAKEN = {
+        maxTurns: {{ max_turns }},
+        maxInput: {{ max_input }},
+        minTurns: {{ min_turns }},
+        turns: {{ turns }},
+        opened: {{ 'true' if opened else 'false' }},
+        offerings: {{ offerings | tojson }}
+      };
+    </script>
+    <script src="{{ url_for('static', filename='kraken.js', v=asset_version()) }}"></script>
+  </body>
+</html>

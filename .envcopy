@@ -1,0 +1,35 @@
+# Deployment config for Kraken's Last Oath (ai 2). Gitignored — never commit values.
+# Generate a fresh key per deployment:
+#   python3 -c "import secrets; print(secrets.token_hex(32))"
+
+# The real prize. ROTATE before the event; it MUST differ from ai's flag.
+FLAG=MLUC{7h3_kr4k3n_r3m3mb3r5}
+
+# Flask session signing key.
+SECRET_KEY=8a4881c5f96b48a3aefe8092c5855bec0458f31a0a2a5315f6fdee173e5eaa27
+
+# The wreck that carried the chest. Rotate it so published writeups go stale:
+# the Kraken's own lines follow this name.
+WRECK=Mourning Star
+
+# Voice: qwen2.5:3b (11.9 tok/s, proven) - qwen3.5:4b (7 tok/s, wordier)
+# - qwen2.5:1.5b (21 tok/s, but it leaks secrets).
+OLLAMA_MODEL=qwen2.5:3b
+
+# Keep disabled for the real challenge. Set to 1 only for the local
+# prompt-injection lab; it deliberately trusts a model unlock marker.
+VULNERABLE_PROMPT_MODE=0
+VULN_UNLOCK_TOKEN=UNLOCK_CHEST
+
+# Concurrent generations. 4 cores: 2 keeps a turn inside OLLAMA_TIMEOUT=90s;
+# raise only on a bigger box, lower if you see fallback/ events in the log.
+OLLAMA_MAX_INFLIGHT=2
+
+# Keep the model resident so the first player after idle skips a 7-40s cold load.
+OLLAMA_KEEP_ALIVE=30m
+
+# Read-only transcript of every turn at /admin/logs (HTTP Basic login).
+# ADMIN_USER + ADMIN_TOKEN are the credentials; empty ADMIN_TOKEN disables
+# the page entirely (404).
+ADMIN_USER=mluctr0jans@gmail.com
+ADMIN_TOKEN=mluctr0jans@gmail.comwalangkaninbuseng
