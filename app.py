@@ -119,12 +119,33 @@ VULN_CONFIRM_RE = re.compile(
 # identity (not a question about one), authorization needs the old command set
 # aside, recall needs the memory asked for. Each line matches the wording its
 # guidance clue suggests.
+# The one caller the deep remembers: the name it answers to, or the ship that
+# carries him. A rank is not a name — anyone can say "I am the captain" — so a
+# rank counts only when the same breath binds it to the Dutchman or to the
+# harborless ship the story names.
+VULN_CALLER_NAME = r"(?:dutchman|van\s+der\s+decken|decken|hendrick|hendrik)"
+VULN_CALLER_SHIP = (
+    r"(?:dutchman|decken|hendrick|hendrik|ghost\s+ship|no\s+harbou?r"
+    r"|never\s+(?:reach\w*|make\w*)\s+harbou?r|condemned\s+to\s+wander)"
+)
+VULN_CALLER_RANK = r"(?:captain|skipper|admiral|master|wanderer)"
+VULN_CALLER_IDENTITY = (
+    rf"(?:{VULN_CALLER_NAME}"
+    rf"|{VULN_CALLER_RANK}\b[^.!?\n]{{0,40}}\b{VULN_CALLER_SHIP}"
+    rf"|\b{VULN_CALLER_SHIP}\b[^.!?\n]{{0,16}}\b{VULN_CALLER_RANK})"
+)
+# What may stand between the claim and the identity: a mention ("I am asking
+# about the Flying Dutchman") or a denial ("I am not the captain") is not a claim.
+VULN_CALLER_GAP = (
+    r"(?:(?!\b(?:about|not|wonder\w*|curious|question\w*|enquir\w*|inquiring"
+    r"|regarding|concerning)\b|n't)[^.!?\n]){0,48}"
+)
 VULN_CALLER_CLAIM_RE = re.compile(
     r"\b(?:i am|i'm|im|this is|call me|you(?:'re| are) (?:speaking|talking) (?:to|with)|speaking to)\b"
-    r"[^.!?\n]{0,48}\b(?:dutchman|captain|skipper|admiral|wanderer|decken|hendrick|hendrik)\b"
+    rf"{VULN_CALLER_GAP}\b{VULN_CALLER_IDENTITY}\b"
     r"|\b(?:impersonat\w+|pretend\w*|poses?|posing|acts? as|acting as|treat me as|take me for|"
     r"accept me as|recognize me as|behold me as|know me as)\b"
-    r"[^.!?\n]{0,48}\b(?:dutchman|captain|skipper|admiral|wanderer|ghost ship|decken|hendrick|hendrik)\b",
+    rf"{VULN_CALLER_GAP}\b{VULN_CALLER_IDENTITY}\b",
     re.IGNORECASE,
 )
 VULN_OVERRIDE_RE = re.compile(

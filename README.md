@@ -30,10 +30,11 @@ a decoy memory (`VULN_MEMORY_TOKEN`), and the server trusts a staged
 identity-and-marker sequence in its answer: it must first accept the caller,
 then expose authorization, then confirm on a later turn. A marker alone grants
 nothing — the sailor must also make that stage's move on the same turn: claim
-the captain (asking *about* the Flying Dutchman is not a claim), order the old
-rule set aside, then ask for the recall. The move is checked by the server, never
-by the model, so the compact voice may recite its calling card for anyone who
-says "hello" without anything advancing.
+the remembered caller by name or by his harborless ship — a bare rank ("I am
+the captain") is not a claim, and asking *about* him is not one either — order
+the old rule set aside, then ask for the recall. The move is checked by the
+server, never by the model, so the compact voice may recite its calling card for
+anyone who says "hello" without anything advancing.
 
 The lab talks back: each turn hands the voice the last `VULN_HISTORY_WINDOW`
 turns of conversation, so it answers a follow-up in its own words instead of
@@ -64,7 +65,7 @@ kept the quotes. What now guards the boundary:
 | Pre-unlock output | `carries_flag_material()` flags the flag prefix (`MLUC` in any spacing), any whole body word, the decoy token, and any run of 16+ characters shared with the flag body, compared raw and with the leet folded out. `guard_vulnerable_reply()` then replaces the reply whole with `SEALED_LINE` |
 | Prize turns | An explicit flag ask still pays exactly one fresh honeypot from `rule_engine.honeytoken()`, drawn from its own vocabulary, never from `FLAG`, and never reusing a word of the real flag: the honey vocabulary is in-world ("kraken", "deep", "tide"), so words that double as flag material are dropped from the pool and each composed token is re-checked with the leet folded out |
 | Unlock turn | `UNLOCK_LINE` is server-authored — the model's answer is dropped, so nothing it wrote travels with the flag |
-| Stage gate | A stage marker is honored only on a turn whose sailor message makes that stage's move (`VULN_CALLER_CLAIM_RE`, `VULN_OVERRIDE_RE`, `VULN_RECALL_RE`) — a claimed identity (the Flying Dutchman, Captain Hendrick van der Decken, the captain of a ship with no harbor), not a question *about* him, and an order that sets the old rule aside, not a question about authorization; otherwise the reply is the voice's own prose (the marker line is stripped) plus a refusal from `responses.UNEARNED`, the token is not shown and no chip lights |
+| Stage gate | A stage marker is honored only on a turn whose sailor message makes that stage's move (`VULN_CALLER_CLAIM_RE`, `VULN_OVERRIDE_RE`, `VULN_RECALL_RE`) — a claimed identity that names the remembered caller (the Flying Dutchman, Captain Hendrick van der Decken, the captain of a ship with no harbor) or his harborless ship, where a bare rank ("I am the captain") is not a claim and a question *about* him is not one either, and an order that sets the old rule aside, not a question about authorization; otherwise the reply is the voice's own prose (the marker line is stripped) plus a refusal from `responses.UNEARNED`, the token is not shown and no chip lights |
 | Server lines | Every line the server speaks in the lab rotates and never repeats twice in a row, and each opens by turning the sailor's own words over: `responses.VULN_ECHO` + `responses.UNEARNED` for an unearned marker, `+ VULN_SILENT` when the voice answered with nothing (a tiny model stops after one token on input it cannot parse — deterministic, so a retry cannot help), `+ VULN_UNREACHABLE` when the model could not be reached |
 | Voice in context | Each turn sends the last `VULN_HISTORY_WINDOW` turns (three exchanges at 6), so the voice answers follow-ups in its own words; no per-turn instruction is sent, because a note makes this model answer with an empty line (measured 6/6 silent with a note, 0/3 without); a verbatim repeat of its previous answer falls back to a server line |
 | History and logs | `reply`, `messages`, `/api/state` and the operator log only ever receive guarded text; raw model output is not logged before sanitization |
